@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Le Chess | By L.Malakar</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+    <style>
+        :root {
+            --gold: #d4af37;
+            --dark-slate: #0a0f1a;
+            --squircle: 14px;
+            --error-red: #ef4444;
+            --highlight-color: rgba(34, 197, 94, 0.8);
+        }
+
+        body {
+            background-color: var(--dark-slate);
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            overflow: hidden;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        /* --- DYNAMIC FLASHLIGHT LIGHT SOURCE --- */
+        #flashlight-mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: -1;
+            background: radial-gradient(
+                circle 250px at var(--mouse-x, 50%) var(--mouse-y, 50%),
+                rgba(0, 0, 0, 0) 0%,
+                rgba(0, 0, 0, 0.2) 30%,
+                rgba(10, 15, 26, 0.85) 100%
+            );
+        }
+
+        /* Hidden YouTube Container */
+        #yt-player-container {
+            position: absolute;
+            width: 0;
+            height: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .btn-squircle {
+            border-radius: var(--squircle);
+            transition: all 0.3s ease;
+            background: var(--gold);
+            color: #000;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+        }
+
+        .btn-squircle:hover { transform: scale(1.05); box-shadow: 0 0 15px rgba(212, 175, 55, 0.4); }
+
+        .close-x {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 32px;
+            height: 32px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: white;
+            font-weight: bold;
+            z-index: 10;
+        }
+        .close-x:hover { background: var(--error-red); transform: rotate(90deg); }
+
+        .glow-text {
+            font-size: 5rem;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 0 15px var(--gold);
+            animation: shine 4s infinite;
+        }
+        @keyframes shine { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #334155;
+            transition: .4s; border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute; content: "";
+            height: 16px; width: 16px; left: 3px; bottom: 3px;
+            background-color: white; transition: .4s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--gold); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; margin: 0; 
+        }
+
+        #bgCanvas { position: fixed; top: 0; left: 0; z-index: -2; }
+        .hidden { display: none !important; }
+        
+        .book-ui {
+            background: #f4e4bc;
+            color: #332211;
+            border: 6px solid #4a3728;
+            border-radius: var(--squircle);
+            padding: 25px;
+            box-shadow: 20px 20px 0px rgba(0,0,0,0.3);
+            min-height: 480px;
+            display: flex; flex-direction: column;
+            justify-content: space-between;
+        }
+        .book-page-btn {
+            font-weight: bold;
+            color: #5a4a3a;
+            cursor: pointer;
+            user-select: none;
+        }
+        .book-page-btn:hover { color: #000; text-decoration: underline; }
+        
+        .book-img-container {
+            background: rgba(0,0,0,0.05);
+            border: 2px dashed rgba(0,0,0,0.1);
+            border-radius: 8px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 110px;
+        }
+
+        .vs-badge {
+            background: var(--gold);
+            color: black;
+            font-weight: 900;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            box-shadow: 0 0 10px var(--gold);
+        }
+
+        .dot-highlight { position: relative; }
+        .dot-highlight::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 15px; height: 15px;
+            background-color: var(--highlight-color);
+            border-radius: 50%;
+            pointer-events: none;
+            box-shadow: 0 0 8px var(--highlight-color);
+        }
+        
+        .capture-highlight { position: relative; }
+        .capture-highlight::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            border: 4px solid rgba(239, 68, 68, 0.6);
+            border-radius: 50%;
+            box-sizing: border-box;
+            pointer-events: none;
+        }
+
+        .king-check-highlight {
+            background-color: rgba(239, 68, 68, 0.8) !important;
+            box-shadow: inset 0 0 20px #000, 0 0 15px #ef4444 !important;
+        }
+
+        .promo-choice {
+            transition: all 0.2s;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .promo-choice:hover {
+            background: rgba(212, 175, 55, 0.2);
+            border-color: var(--gold);
+            transform: scale(1.1);
+        }
+
+        .status-announcement {
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            z-index: 100;
+            pointer-events: none;
+            text-align: center;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            opacity: 0;
+            white-space: nowrap;
+        }
+
+        .animate-zoom {
+            animation: zoomInOut 2s ease-in-out forwards;
+        }
+
+        @keyframes zoomInOut {
+            0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
+            20% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+            40% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            80% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(3); opacity: 0; }
+        }
+
+        .check-text {
+            color: #f59e0b;
+            font-size: 6rem;
+            text-shadow: 0 0 30px rgba(245, 158, 11, 0.6);
+        }
+
+        .mate-text {
+            color: #ef4444;
+            font-size: 5rem;
+            text-shadow: 0 0 40px rgba(239, 68, 68, 0.8);
+        }
+    </style>
+</head>
+<body onclick="handleUserInteraction()">
+
+<div id="yt-player-container">
+    <div id="player"></div>
+</div>
+
+<canvas id="bgCanvas"></canvas>
+<div id="flashlight-mask"></div>
+
+<div id="check-alert" class="status-announcement check-text">CHECK</div>
+<div id="mate-alert" class="status-announcement mate-text">CHECKMATE</div>
+
+<div id="win-win" class="hidden fixed inset-0 flex items-center justify-center bg-black/90 z-[80]" onclick="event.stopPropagation()">
+    <div class="bg-slate-900 p-10 rounded-2xl border-4 border-gold text-center max-w-sm">
+        <h2 class="text-6xl mb-4">🏆</h2>
+        <h2 class="text-4xl text-gold font-black mb-2 italic">VICTORY</h2>
+        <p class="text-white opacity-80 mb-8">The battlefield belongs to you. Divine glory achieved.</p>
+        <button class="btn-squircle w-full py-4 text-xl" onclick="location.reload()">REPLAY</button>
+    </div>
+</div>
+
+<div id="lose-win" class="hidden fixed inset-0 flex items-center justify-center bg-black/90 z-[80]" onclick="event.stopPropagation()">
+    <div class="bg-slate-900 p-10 rounded-2xl border-4 border-red-600 text-center max-w-sm">
+        <h2 class="text-6xl mb-4">💀</h2>
+        <h2 class="text-4xl text-red-500 font-black mb-2 italic">DEFEAT</h2>
+        <p class="text-white opacity-80 mb-8">The Shroud of Dharma has fallen. Better luck next life.</p>
+        <button class="btn-squircle bg-red-600 text-white w-full py-4 text-xl" onclick="location.reload()">TRY AGAIN</button>
+    </div>
+</div>
+
+<div id="draw-win" class="hidden fixed inset-0 flex items-center justify-center bg-black/90 z-[80]" onclick="event.stopPropagation()">
+    <div class="bg-slate-900 p-10 rounded-2xl border-4 border-blue-400 text-center max-w-sm">
+        <h2 class="text-6xl mb-4">⚖️</h2>
+        <h2 class="text-4xl text-blue-400 font-black mb-2 italic">DRAW</h2>
+        <p id="draw-reason" class="text-white opacity-80 mb-8">Balance has been restored to the Trimandala.</p>
+        <button class="btn-squircle bg-blue-500 text-white w-full py-4 text-xl" onclick="location.reload()">REPLAY</button>
+    </div>
+</div>
+
+<div id="home-menu" class="flex flex-col items-center justify-center h-screen">
+    <div class="fixed top-6 left-6 right-6 flex justify-between items-center">
+        <button class="bg-slate-800 border border-gold text-gold p-3 rounded-xl hover:bg-gold hover:text-black transition-colors" onclick="event.stopPropagation(); soundEngine.play('click'); openWin('settings-win')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/></svg>
+        </button>
+        <button id="profile-btn" class="btn-squircle flex gap-3" onclick="event.stopPropagation(); soundEngine.play('click'); handleProfileClick()">
+            <span id="p-name-display">Sign In</span>
+            <span id="p-avatar-display">✋</span>
+        </button>
+    </div>
+
+    <h1 class="glow-text">LE CHESS</h1>
+    <p class="text-xl tracking-widest opacity-80 mb-8">V- 0.1(Beta)</p>
+    
+    <div class="flex gap-4">
+        <button class="btn-squircle text-2xl px-12" onclick="event.stopPropagation(); soundEngine.play('click'); openWin('setup-win')">⚔️ PLAY</button>
+        <button class="btn-squircle bg-slate-700 text-white" onclick="event.stopPropagation(); soundEngine.play('click'); openWin('how-to-win')">📖 RULES</button>
+    </div>
+</div>
+
+<div id="setup-win" class="hidden fixed inset-0 flex items-center justify-center bg-black/80 z-50" onclick="event.stopPropagation()">
+    <div class="bg-slate-900 p-8 rounded-2xl border border-gold w-[420px] relative">
+        <div class="close-x" onclick="soundEngine.play('click'); closeWin('setup-win')">✕</div>
+        <h2 class="text-2xl text-center text-gold mb-6 font-bold">Battle Config</h2>
+        <div class="space-y-4">
+            <div class="flex justify-between items-center bg-slate-800 p-3 rounded">
+                <span>Side:</span>
+                <select id="sel-side" class="bg-transparent text-gold outline-none">
+                    <option value="w">⚪ White</option>
+                    <option value="b">⚫ Black</option>
+                </select>
+            </div>
+            <div class="flex justify-between items-center bg-slate-800 p-3 rounded">
+                <span>AI Core:</span>
+                <select id="sel-diff" class="bg-transparent text-gold outline-none">
+                    <option value="baby">👶 Baby (20%)</option>
+                    <option value="normal">🤖 Normal (40%)</option>
+                    <option value="expert">🧠 Expert (60%)</option>
+                    <option value="master">🛡️ Master (75%)</option>
+                    <option value="gm">🔱 Grand Master (100%)</option>
+                </select>
+            </div>
+            <div class="flex justify-between items-center bg-slate-800 p-3 rounded">
+                <span>Time:</span>
+                <select id="sel-time" class="bg-transparent text-gold outline-none" onchange="handleTimeChange(this.value)">
+                    <option value="300">5:00</option>
+                    <option value="600">10:00</option>
+                    <option value="900">15:00</option>
+                    <option value="1200">20:00</option>
+                    <option value="1800">30:00</option>
+                    <option value="3600">60:00</option>
+                    <option value="unlimited">Unlimited</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+            <div class="grid grid-cols-1 gap-2">
+                <div class="flex justify-between items-center bg-slate-800 p-3 rounded">
+                    <span class="text-sm">Show Path (Green Dots)</span>
+                    <label class="switch"><input type="checkbox" id="cfg-paths" checked><span class="slider"></span></label>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-1 flex justify-between items-center bg-slate-800 p-3 rounded">
+                        <span class="text-sm">Hints</span>
+                        <label class="switch"><input type="checkbox" id="cfg-hints" checked><span class="slider"></span></label>
+                    </div>
+                    <div class="flex-1 flex justify-between items-center bg-slate-800 p-3 rounded">
+                        <span class="text-sm">Undo</span>
+                        <label class="switch"><input type="checkbox" id="cfg-undo" checked><span class="slider"></span></label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button class="btn-squircle w-full mt-8" onclick="soundEngine.play('click'); initGame()">Commence Battle --></button>
+    </div>
+</div>
+
+<div id="promotion-win" class="hidden fixed inset-0 flex items-center justify-center bg-black/90 z-[70]" onclick="event.stopPropagation()">
+    <div class="bg-slate-900 p-8 rounded-2xl border-2 border-gold text-center">
+        <h2 class="text-xl text-gold mb-6 font-bold tracking-widest uppercase">Ascension Selection</h2>
+        <div class="flex gap-6 justify-center">
+            <div class="promo-choice p-4 rounded-xl bg-slate-800" onclick="resolvePromotion('q')">
+                <img src="https://chessboardjs.com/img/chesspieces/wikipedia/wQ.png" class="w-16 h-16 mb-2 mx-auto piece-img-swap">
+                <span class="text-xs font-bold block">MANTRI</span>
+            </div>
+            <div class="promo-choice p-4 rounded-xl bg-slate-800" onclick="resolvePromotion('r')">
+                <img src="https://chessboardjs.com/img/chesspieces/wikipedia/wR.png" class="w-16 h-16 mb-2 mx-auto piece-img-swap">
+                <span class="text-xs font-bold block">RATHA</span>
+            </div>
+            <div class="promo-choice p-4 rounded-xl bg-slate-800" onclick="resolvePromotion('b')">
+                <img src="https://chessboardjs.com/img/chesspieces/wikipedia/wB.png" class="w-16 h-16 mb-2 mx-auto piece-img-swap">
+                <span class="text-xs font-bold block">GAJA</span>
+            </div>
+            <div class="promo-choice p-4 rounded-xl bg-slate-800" onclick="resolvePromotion('n')">
+                <img src="https://chessboardjs.com/img/chesspieces/wikipedia/wN.png" class="w-16 h-16 mb-2 mx-auto piece-img-swap">
+                <span class="text-xs font-bold block">ASHVA</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="custom-time-win" class="hidden fixed inset-0 flex items-center justify-center bg-black/90 z-[60]" onclick="event.stopPropagation()">
+    <div class="bg-slate-900 p-8 rounded-2xl border border-gold w-[350px] relative text-center">
+        <h2 class="text-xl text-gold mb-6">Set Temporal Limits</h2>
+        <div class="flex gap-4 justify-center mb-8">
+            <div class="flex flex-col gap-1">
+                <input type="number" id="cust-h" value="0" min="0" max="99" class="w-16 p-3 bg-slate-800 border border-gray-600 rounded text-center text-xl text-white outline-none focus:border-gold">
+                <span class="text-xs text-gray-400">HRS</span>
+            </div>
+            <div class="text-2xl mt-2">:</div>
+            <div class="flex flex-col gap-1">
+                <input type="number" id="cust-m" value="10" min="0" max="59" class="w-16 p-3 bg-slate-800 border border-gray-600 rounded text-center text-xl text-white outline-none focus:border-gold">
+                <span class="text-xs text-gray-400">MIN</span>
+            </div>
+            <div class="text-2xl mt-2">:</div>
+            <div class="flex flex-col gap-1">
+                <input type="number" id="cust-s" value="0" min="0" max="59" class="w-16 p-3 bg-slate-800 border border-gray-600 rounded text-center text-xl text-white outline-none focus:border-gold">
+                <span class="text-xs text-gray-400">SEC</span>
+            </div>
+        </div>
+        <button class="btn-squircle w-full" onclick="soundEngine.play('click'); closeWin('custom-time-win')">CONFIRM</button>
+    </div>
+</div>
+
+<div id="profile-win" class="hidden fixed inset-0 flex items-center justify-center bg-black/90 z-50" onclick="event.stopPropagation()">
+    <div class="bg-slate-900 p-8 rounded-2xl border border-gold w-96 text-center relative">
+        <div class="close-x" onclick="soundEngine.play('click'); closeWin('profile-win')">✕</div>
+        <h2 class="text-2xl mb-4 text-gold">Player Identity</h2>
+        <input id="reg-name" type="text" placeholder="Enter Name (Min 3 chars)" class="w-full p-3 mb-4 bg-slate-800 rounded border border-gray-600 outline-none focus:border-gold transition-all">
+        <select id="reg-class" class="w-full p-3 mb-6 bg-slate-800 rounded border border-gray-600">
+            <option>Newbie</option><option>Beginner</option><option>Intermediate</option><option>Expert</option><option>Master</option><option>Grand Master</option>
+        </select>
+        <div class="grid grid-cols-5 gap-2 mb-6" id="avatar-grid"></div>
+        <button class="btn-squircle w-full" onclick="soundEngine.play('click'); saveProfile()">Save Identity --></button>
+    </div>
+</div>
+
+<div id="info-win" class="hidden fixed inset-0 flex items-center justify-center bg-black/90 z-50" onclick="event.stopPropagation()">
+    <div class="bg-slate-900 p-8 rounded-2xl border border-gold w-80 text-center relative">
+        <div class="close-x" onclick="soundEngine.play('click'); closeWin('info-win')">✕</div>
+        <div id="info-avatar" class="text-6xl mb-4">✋</div>
+        <h2 id="info-name" class="text-2xl text-white font-bold">Laya</h2>
+        <p id="info-rank" class="text-gold mb-8 uppercase tracking-widest text-sm">Grand Master</p>
+        <div class="flex flex-col gap-3">
+            <button class="btn-squircle bg-blue-600 text-white" onclick="soundEngine.play('click'); changeIdentity()">🔄 Change Pic / Name</button>
+            <button class="btn-squircle bg-red-900/40 border border-red-500 text-red-200" onclick="soundEngine.play('click'); deleteIdentity()">🗑️ Delete Identity</button>
+        </div>
+    </div>
+</div>
+
+<div id="how-to-win" class="hidden fixed inset-0 flex items-center justify-center bg-black/80 z-50" onclick="event.stopPropagation()">
+    <div class="book-ui w-[380px] relative">
+        <div>
+            <h2 class="text-xl font-bold border-b-2 border-black/20 mb-2 flex justify-between">
+                <span>📜 Chess Codex</span>
+                <span id="page-num" class="text-sm font-normal opacity-60">1/9</span>
+            </h2>
+            <div id="book-img" class="book-img-container"></div>
+            <div id="book-content" class="text-sm leading-relaxed min-h-[180px]"></div>
+        </div>
+        <div class="flex justify-between items-center px-2 mt-4">
+            <span id="prev-page" class="book-page-btn text-2xl" onclick="soundEngine.play('click'); changePage(-1)">◀</span>
+            <button class="font-bold text-red-800 text-xs uppercase" onclick="soundEngine.play('click'); closeWin('how-to-win')">Done</button>
+            <span id="next-page" class="book-page-btn text-2xl" onclick="soundEngine.play('click'); changePage(1)">▶</span>
+        </div>
+    </div>
+</div>
+
+<div id="settings-win" class="hidden fixed inset-0 flex items-center justify-center bg-black/80 z-50" onclick="event.stopPropagation()">
+    <div class="bg-slate-900 p-8 rounded-2xl border border-gold w-80 relative">
+        <div class="close-x" onclick="soundEngine.play('click'); closeWin('settings-win')">✕</div>
+        <h2 class="text-xl text-gold mb-6 text-center">System Settings</h2>
+        <div class="flex justify-between items-center mb-6">
+            <span>Audio SFX</span>
+            <label class="switch"><input type="checkbox" id="set-sound" checked onchange="soundEngine.play('click')"><span class="slider"></span></label>
+        </div>
+        <div class="flex justify-between items-center mb-6">
+            <span>Music (Lofi)</span>
+            <label class="switch"><input type="checkbox" id="set-music" checked onchange="toggleMusic()"><span class="slider"></span></label>
+        </div>
+    </div>
+</div>
+
+<div id="game-ui" class="hidden fixed inset-0 bg-slate-950 flex flex-col items-center justify-center" onclick="event.stopPropagation()">
+    <div class="flex w-full max-w-4xl justify-between items-center mb-4 px-4">
+        <div class="flex gap-4 items-center bg-slate-900/50 p-2 px-4 rounded-2xl border border-white/5 shadow-lg">
+            <div class="flex gap-3 items-center">
+                <span id="game-p-avatar" class="text-3xl">✋</span>
+                <div><p id="game-p-name" class="font-bold text-sm">Laya</p><p id="game-p-class" class="text-[10px] text-gold uppercase tracking-tighter">Beginner</p></div>
+            </div>
+            
+            <div class="vs-badge">V/S</div>
+
+            <div class="flex gap-3 items-center text-right">
+                <div><p class="font-bold text-sm">Akasha AI</p><p id="game-ai-level" class="text-[10px] text-blue-400 uppercase tracking-tighter">Normal</p></div>
+                <span class="text-3xl">🤖</span>
+            </div>
+        </div>
+
+        <div class="flex gap-6 text-xl">
+            <div class="bg-slate-800 px-4 py-1 rounded-lg border border-gold/30">⏳ <span id="timer">00:00</span></div>
+            <div class="bg-slate-800 px-4 py-1 rounded-lg border border-gold/30">🏆 <span id="score">0</span></div>
+        </div>
+    </div>
+    <div id="mainBoard" style="width: 500px" class="shadow-2xl border-4 border-slate-700 rounded"></div>
+    <div class="flex gap-4 mt-8">
+        <button id="btn-undo-game" class="bg-slate-800 p-3 rounded-xl border border-gold" onclick="soundEngine.play('click'); undo()">↩️ Undo</button>
+        <button id="btn-hint-game" class="bg-slate-800 p-3 rounded-xl border border-gold" onclick="soundEngine.play('click'); showHint()">💡 Hint</button>
+        <button class="bg-red-900/50 p-3 rounded-xl border border-red-500 text-red-200" onclick="soundEngine.play('click'); location.reload()">🏳️ Surrender</button>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+    let ytPlayer;
+    let musicStarted = false;
+
+    function onYouTubeIframeAPIReady() {
+        const savedTime = parseFloat(localStorage.getItem('antroverce_bgm_time')) || 0;
+        
+        ytPlayer = new YT.Player('player', {
+            height: '0',
+            width: '0',
+            videoId: 'FFfdyV8gnWk',
+            playerVars: {
+                'autoplay': 0,
+                'controls': 0,
+                'start': Math.floor(savedTime),
+                'loop': 1,
+                'playlist': 'FFfdyV8gnWk'
+            },
+            events: {
+                'onReady': onPlayerReady
+            }
+        });
+    }
+
+    function onPlayerReady(event) {
+        setInterval(() => {
+            if (ytPlayer && ytPlayer.getCurrentTime) {
+                localStorage.setItem('antroverce_bgm_time', ytPlayer.getCurrentTime());
+            }
+        }, 1000);
+    }
+
+    function handleUserInteraction() {
+        toggleFullScreen();
+        soundEngine.init();
+        
+        // Browsers block audio until a click happens. 
+        // This function triggers on any click, allowing the music to start.
+        if (!musicStarted && ytPlayer && document.getElementById('set-music').checked) {
+            ytPlayer.playVideo();
+            musicStarted = true;
+        }
+    }
+
+    function toggleMusic() {
+        if (!ytPlayer) return;
+        if (document.getElementById('set-music').checked) {
+            ytPlayer.playVideo();
+        } else {
+            ytPlayer.pauseVideo();
+        }
+    }
+</script>
+
+<script>
+    /* --- SYTHETIC SOUND ENGINE --- */
+    const soundEngine = {
+        ctx: null,
+        enabled: true,
+        init() {
+            if (this.ctx) return;
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        },
+        play(type) {
+            if (!this.ctx || !document.getElementById('set-sound').checked) return;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            const now = this.ctx.currentTime;
+
+            switch(type) {
+                case 'click':
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(800, now);
+                    osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(); osc.stop(now + 0.1);
+                    break;
+                case 'move':
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(150, now);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(); osc.stop(now + 0.1);
+                    break;
+                case 'capture':
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(200, now + 0.15);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(); osc.stop(now + 0.15);
+                    break;
+                case 'check':
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.exponentialRampToValueAtTime(880, now + 0.3);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                    osc.start(); osc.stop(now + 0.5);
+                    break;
+                case 'mate':
+                    this.playLongAlert(false); 
+                    break;
+                case 'win':
+                    this.playLongAlert(true); 
+                    break;
+            }
+        },
+        playLongAlert(isWin) {
+            const notes = isWin ? [261.63, 329.63, 392.00, 523.25] : [200, 150, 100, 50];
+            notes.forEach((freq, i) => {
+                const o = this.ctx.createOscillator();
+                const g = this.ctx.createGain();
+                o.type = isWin ? 'sine' : 'sawtooth';
+                o.frequency.setValueAtTime(freq, this.ctx.currentTime + (i * 0.15));
+                o.connect(g); g.connect(this.ctx.destination);
+                g.gain.setValueAtTime(0.1, this.ctx.currentTime + (i * 0.15));
+                g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + (i * 0.15) + 0.4);
+                o.start(this.ctx.currentTime + (i * 0.15)); o.stop(this.ctx.currentTime + (i * 0.15) + 0.4);
+            });
+        }
+    };
+
+    function toggleFullScreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {});
+        }
+    }
+
+    window.addEventListener('mousemove', e => {
+        const mask = document.getElementById('flashlight-mask');
+        mask.style.setProperty('--mouse-x', e.clientX + 'px');
+        mask.style.setProperty('--mouse-y', e.clientY + 'px');
+    });
+
+    let board = null;
+    let game = new Chess();
+    let selectedAvatar = '✋';
+    let gameTimer = null;
+    let secondsLeft = 0;
+    let currentScore = 0;
+    let playerSide = 'w';
+    let showPaths = true;
+    let pendingPromotion = null;
+
+    const pieceValues = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+
+    function removeHighlights() {
+        $('#mainBoard .square-55d63').removeClass('dot-highlight capture-highlight king-check-highlight');
+    }
+
+    function highlightSquare(square, type) {
+        const $square = $('#mainBoard .square-' + square);
+        if (type === 'move') $square.addClass('dot-highlight');
+        if (type === 'capture') $square.addClass('capture-highlight');
+        if (type === 'king-check') $square.addClass('king-check-highlight');
+    }
+
+    function showAlert(type) {
+        const id = type === 'check' ? 'check-alert' : 'mate-alert';
+        const el = document.getElementById(id);
+        el.classList.remove('animate-zoom');
+        void el.offsetWidth;
+        el.classList.add('animate-zoom');
+        
+        const kingPos = findKing(game.turn());
+        if(kingPos) highlightSquare(kingPos, 'king-check');
+        soundEngine.play(type);
+    }
+
+    function findKing(color) {
+        for(let r=0; r<8; r++) {
+            for(let c=0; c<8; c++) {
+                let sq = String.fromCharCode(97 + c) + (8 - r);
+                let p = game.get(sq);
+                if(p && p.type === 'k' && p.color === color) return sq;
+            }
+        }
+        return null;
+    }
+
+    function findKing(color) {
+        for(let r=0; r<8; r++) {
+            for(let c=0; c<8; c++) {
+                let sq = String.fromCharCode(97 + c) + (8 - r);
+                let p = game.get(sq);
+                if(p && p.type === 'k' && p.color === color) return sq;
+            }
+        }
+        return null;
+    }
+
+    function checkGameState() {
+        removeHighlights();
+        if (game.in_checkmate()) {
+            showAlert('mate');
+            const winnerColor = game.turn() === 'w' ? 'b' : 'w';
+            setTimeout(() => {
+                if (winnerColor === playerSide) {
+                    soundEngine.play('win');
+                    openWin('win-win');
+                } else {
+                    soundEngine.play('mate');
+                    openWin('lose-win');
+                }
+            }, 2500);
+        } else if (game.in_draw()) {
+            let reason = "The game has ended in a Draw.";
+            if (game.in_stalemate()) reason = "Draw by Stalemate: No legal moves.";
+            else if (game.in_threefold_repetition()) reason = "Draw by Threefold Repetition.";
+            else if (game.insufficient_material()) reason = "Draw by Insufficient Material.";
+            else if (game.in_draw()) reason = "Draw by 50-move rule.";
+            document.getElementById('draw-reason').innerText = reason;
+            openWin('draw-win');
+        } else if (game.in_check()) {
+            showAlert('check');
+        }
+    }
+
+    function updateScore(move) {
+        if (move.captured) {
+            soundEngine.play('capture');
+            const val = pieceValues[move.captured];
+            if (move.color === playerSide) currentScore += val;
+            else currentScore -= val;
+            document.getElementById('score').innerText = currentScore;
+        } else {
+            soundEngine.play('move');
+        }
+        checkGameState();
+    }
+
+    const pst = {
+        p: [[0, 0, 0, 0, 0, 0, 0, 0],[5, 10, 10, -20, -20, 10, 10, 5],[5, -5, -10, 0, 0, -10, -5, 5],[0, 0, 0, 20, 20, 0, 0, 0],[5, 5, 10, 25, 25, 10, 5, 5],[10, 10, 20, 30, 30, 20, 10, 10],[50, 50, 50, 50, 50, 50, 50, 50],[0, 0, 0, 0, 0, 0, 0, 0]],
+        n: [[-50, -40, -30, -30, -30, -30, -40, -50],[-40, -20, 0, 5, 5, 0, -20, -40],[-30, 5, 10, 15, 15, 10, 5, -30],[-30, 0, 15, 20, 20, 15, 0, -30],[-30, 5, 10, 15, 15, 10, 5, -30],[-30, 0, 10, 15, 15, 10, 0, -30],[-40, -20, 0, 0, 0, 0, -20, -40],[-50, -40, -30, -30, -30, -30, -40, -50]],
+        b: [[-20, -10, -10, -10, -10, -10, -10, -20],[-10, 5, 0, 0, 0, 0, 5, -10],[-10, 10, 10, 10, 10, 10, 10, -10],[-10, 0, 10, 10, 10, 10, 0, -10],[-10, 5, 5, 10, 10, 5, 5, -10],[-10, 0, 5, 10, 10, 5, 0, -10],[-10, 0, 0, 0, 0, 0, 0, -10],[-20, -10, -10, -10, -10, -10, -10, -20]],
+        r: [[0, 0, 0, 5, 5, 0, 0, 0],[-5, 0, 0, 0, 0, 0, 0, -5],[-5, 0, 0, 0, 0, 0, 0, -5],[-5, 0, 0, 0, 0, 0, 0, -5],[-5, 0, 0, 0, 0, 0, 0, -5],[-5, 0, 0, 0, 0, 0, 0, -5],[5, 10, 10, 10, 10, 10, 10, 5],[0, 0, 0, 0, 0, 0, 0, 0]],
+        q: [[-20, -10, -10, -5, -5, -10, -10, -20],[-10, 0, 5, 0, 0, 0, 0, -10],[-10, 5, 5, 5, 5, 5, 0, -10],[0, 0, 5, 5, 5, 5, 0, -5],[-5, 0, 5, 5, 5, 5, 0, -5],[-10, 0, 5, 5, 5, 5, 0, -10],[-10, 0, 0, 0, 0, 0, 0, -10],[-20, -10, -10, -5, -5, -10, -10, -20]],
+        k: [[20, 30, 10, 0, 0, 10, 30, 20],[20, 20, 0, 0, 0, 0, 20, 20],[-10, -20, -20, -20, -20, -20, -20, -10],[-20, -30, -40, -40, -40, -40, -30, -20],[-30, -40, -40, -50, -50, -40, -40, -30],[-30, -40, -40, -50, -50, -40, -40, -30],[-30, -40, -40, -50, -50, -40, -40, -30],[-30, -40, -40, -50, -50, -40, -40, -30]]
+    };
+
+    function evaluateBoard(gameObj) {
+        let totalVal = 0;
+        const board = gameObj.board();
+        for (let i = 0; i < 8; i++) {
+            for (let j = 0; j < 8; j++) {
+                const piece = board[i][j];
+                if (piece) {
+                    let val = pieceValues[piece.type] * 100;
+                    val += pst[piece.type][piece.color === 'w' ? 7-i : i][j];
+                    totalVal += (piece.color === 'w' ? val : -val);
+                }
+            }
+        }
+        return totalVal;
+    }
+
+    function minimax(gameObj, depth, alpha, beta, isMaximizing) {
+        if (depth === 0) return -evaluateBoard(gameObj);
+        const moves = gameObj.moves();
+        if (isMaximizing) {
+            let bestScore = -9999;
+            for (const move of moves) {
+                gameObj.move(move);
+                bestScore = Math.max(bestScore, minimax(gameObj, depth - 1, alpha, beta, !isMaximizing));
+                gameObj.undo();
+                alpha = Math.max(alpha, bestScore);
+                if (beta <= alpha) return bestScore;
+            }
+            return bestScore;
+        } else {
+            let bestScore = 9999;
+            for (const move of moves) {
+                gameObj.move(move);
+                bestScore = Math.min(bestScore, minimax(gameObj, depth - 1, alpha, beta, !isMaximizing));
+                gameObj.undo();
+                beta = Math.min(beta, bestScore);
+                if (beta <= alpha) return bestScore;
+            }
+            return bestScore;
+        }
+    }
+
+    function makeAIMove() {
+        const moves = game.moves();
+        if (moves.length === 0) return;
+        const diffKey = document.getElementById('sel-diff').value;
+        const rand = Math.random();
+        let move;
+        const probs = { baby: 0.2, normal: 0.4, expert: 0.6, master: 0.75, gm: 1.0 };
+        const depth = (diffKey === 'gm' || diffKey === 'master') ? 3 : 2;
+
+        if (rand < probs[diffKey]) {
+            let bestScore = -9999;
+            let bestMove = moves[0];
+            for (let i = 0; i < moves.length; i++) {
+                game.move(moves[i]);
+                let score = minimax(game, depth - 1, -10000, 10000, false);
+                game.undo();
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMove = moves[i];
+                }
+            }
+            move = bestMove;
+        } else {
+            move = moves[Math.floor(Math.random() * moves.length)];
+        }
+        const moveRes = game.move(move);
+        updateScore(moveRes);
+        board.position(game.fen());
+    }
+
+    const bookData = [
+        { img: "https://chessboardjs.com/img/chesspieces/wikipedia/wP.png", text: "<b>Padati (Pawn):</b> Moves one square forward, but captures diagonally. On its first move, it can leap two squares." },
+        { img: "https://chessboardjs.com/img/chesspieces/wikipedia/wN.png", text: "<b>Ashva (Knight):</b> Moves in an 'L' shape. It is the only unit that can leap over other pieces." },
+        { img: "https://chessboardjs.com/img/chesspieces/wikipedia/wB.png", text: "<b>Gaja (Bishop):</b> Moves diagonally any distance." },
+        { img: "https://chessboardjs.com/img/chesspieces/wikipedia/wR.png", text: "<b>Ratha (Rook):</b> Moves horizontally or vertically any distance." },
+        { img: "https://chessboardjs.com/img/chesspieces/wikipedia/wQ.png", text: "<b>Mantri (Queen):</b> The most powerful force. Combines Ratha and Gaja." },
+        { img: "https://chessboardjs.com/img/chesspieces/wikipedia/wK.png", text: "<b>Raja (King):</b> Your divine essence. Loss of Raja means defeat." }
+    ];
+    let currentPage = 0;
+
+    function handleTimeChange(val) { if(val === 'custom') openWin('custom-time-win'); }
+    function changePage(dir) { currentPage += dir; updateBook(); }
+    function updateBook() {
+        const page = bookData[currentPage];
+        document.getElementById('book-img').innerHTML = `<img src="${page.img}" class="w-16 h-16">`;
+        document.getElementById('book-content').innerHTML = page.text;
+        document.getElementById('page-num').innerText = `${currentPage + 1}/${bookData.length}`;
+        document.getElementById('prev-page').style.visibility = currentPage === 0 ? 'hidden' : 'visible';
+        document.getElementById('next-page').style.visibility = currentPage === bookData.length - 1 ? 'hidden' : 'visible';
+    }
+
+    function handleProfileClick() {
+        const data = localStorage.getItem('antrovece_profile');
+        if (data) openWin('info-win'); else openWin('profile-win');
+    }
+
+    function saveProfile() {
+        const name = document.getElementById('reg-name').value.trim();
+        const rank = document.getElementById('reg-class').value;
+        if(name.length < 3) return;
+        localStorage.setItem('antrovece_profile', JSON.stringify({ name, rank, avatar: selectedAvatar }));
+        loadProfile(); 
+        closeWin('profile-win');
+    }
+
+    function loadProfile() {
+        const data = localStorage.getItem('antrovece_profile');
+        if(data) {
+            const user = JSON.parse(data);
+            document.getElementById('p-name-display').innerText = user.name;
+            document.getElementById('p-avatar-display').innerText = user.avatar;
+            document.getElementById('game-p-name').innerText = user.name;
+            document.getElementById('game-p-class').innerText = user.rank;
+            document.getElementById('game-p-avatar').innerText = user.avatar;
+            document.getElementById('info-name').innerText = user.name;
+            document.getElementById('info-rank').innerText = user.rank;
+            document.getElementById('info-avatar').innerText = user.avatar;
+        }
+    }
+
+    function changeIdentity() {
+        const data = localStorage.getItem('antrovece_profile');
+        if (data) {
+            const user = JSON.parse(data);
+            document.getElementById('reg-name').value = user.name;
+            document.getElementById('reg-class').value = user.rank;
+            selectedAvatar = user.avatar;
+        }
+        closeWin('info-win');
+        openWin('profile-win');
+    }
+
+    function deleteIdentity() {
+        if(confirm("Are you sure you want to delete your Identity?")) {
+            localStorage.removeItem('antrovece_profile');
+            loadProfile();
+            closeWin('info-win');
+        }
+    }
+
+    function initGame() {
+        document.getElementById('home-menu').classList.add('hidden');
+        document.getElementById('setup-win').classList.add('hidden');
+        document.getElementById('game-ui').classList.remove('hidden');
+        game = new Chess();
+        currentScore = 0;
+        document.getElementById('score').innerText = "0";
+        playerSide = document.getElementById('sel-side').value;
+        showPaths = document.getElementById('cfg-paths').checked;
+        const prefix = playerSide;
+        const promoImgs = document.querySelectorAll('.piece-img-swap');
+        const types = ['Q','R','B','N'];
+        promoImgs.forEach((img, i) => { img.src = `https://chessboardjs.com/img/chesspieces/wikipedia/${prefix}${types[i]}.png`; });
+        const diffTxt = document.getElementById('sel-diff').options[document.getElementById('sel-diff').selectedIndex].text;
+        document.getElementById('game-ai-level').innerText = diffTxt.split('(')[0].trim();
+        const timeVal = document.getElementById('sel-time').value;
+        if(timeVal !== 'unlimited') {
+            secondsLeft = (timeVal === 'custom') ? (parseInt(document.getElementById('cust-h').value)*3600 + parseInt(document.getElementById('cust-m').value)*60 + parseInt(document.getElementById('cust-s').value)) : parseInt(timeVal);
+            startTimer();
+        } else { document.getElementById('timer').innerText = "∞"; }
+        const config = {
+            draggable: true,
+            orientation: playerSide === 'w' ? 'white' : 'black',
+            position: 'start',
+            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+            onDragStart: (source, piece) => {
+                if (game.game_over()) return false;
+                if ((playerSide === 'w' && piece.search(/^b/) !== -1) || (playerSide === 'b' && piece.search(/^w/) !== -1)) return false;
+                if (showPaths) {
+                    const moves = game.moves({ square: source, verbose: true });
+                    moves.forEach(m => highlightSquare(m.to, m.captured ? 'capture' : 'move'));
+                }
+            },
+            onDrop: (source, target) => {
+                removeHighlights();
+                const moves = game.moves({ square: source, verbose: true });
+                const move = moves.find(m => m.from === source && m.to === target);
+                if (move && move.flags.includes('p')) {
+                    pendingPromotion = { from: source, to: target };
+                    openWin('promotion-win');
+                    return 'snapback';
+                }
+                let moveResult = game.move({ from: source, to: target, promotion: 'q' });
+                if (moveResult === null) return 'snapback';
+                updateScore(moveResult);
+                if (!game.game_over()) window.setTimeout(makeAIMove, 400);
+            },
+            onSnapEnd: () => board.position(game.fen())
+        };
+        board = Chessboard('mainBoard', config);
+        $('#mainBoard').on('click', '.square-55d63', function() {
+            const square = $(this).data('square');
+            const piece = game.get(square);
+            removeHighlights();
+            if (showPaths && piece && piece.color === playerSide) {
+                const moves = game.moves({ square: square, verbose: true });
+                moves.forEach(m => highlightSquare(m.to, m.captured ? 'capture' : 'move'));
+            }
+        });
+        if (playerSide === 'b') window.setTimeout(makeAIMove, 500);
+    }
+
+    function resolvePromotion(pieceChar) {
+        if (!pendingPromotion) return;
+        const move = game.move({ from: pendingPromotion.from, to: pendingPromotion.to, promotion: pieceChar });
+        soundEngine.play('click');
+        updateScore(move);
+        board.position(game.fen());
+        closeWin('promotion-win');
+        pendingPromotion = null;
+        if (!game.game_over()) window.setTimeout(makeAIMove, 400);
+    }
+
+    function startTimer() {
+        if(gameTimer) clearInterval(gameTimer);
+        gameTimer = setInterval(() => {
+            secondsLeft--;
+            if(secondsLeft <= 0) { 
+                clearInterval(gameTimer); 
+                soundEngine.play('mate');
+                openWin('lose-win'); 
+                document.querySelector('#lose-win p').innerText = "Time has run out.";
+            }
+            const hrs = Math.floor(secondsLeft / 3600);
+            const mins = Math.floor((secondsLeft % 3600) / 60);
+            const secs = secondsLeft % 60;
+            document.getElementById('timer').innerText = (hrs > 0 ? hrs + ":" : "") + mins.toString().padStart(2, '0') + ":" + secs.toString().padStart(2, '0');
+        }, 1000);
+    }
+
+    function undo() { 
+        let history = game.history();
+        if (history.length === 0) return;
+        let steps = (playerSide === 'b' && history.length === 1) ? 1 : 2;
+        for(let i=0; i < steps; i++) {
+            if (game.history().length > 0) {
+                const move = game.undo();
+                if(move && move.captured) {
+                    const val = pieceValues[move.captured];
+                    currentScore += (move.color === playerSide) ? -val : val;
+                }
+            }
+        }
+        document.getElementById('score').innerText = currentScore;
+        board.position(game.fen()); 
+        removeHighlights();
+    }
+
+    function openWin(id) { document.getElementById(id).classList.remove('hidden'); if(id==='how-to-win') updateBook(); }
+    function closeWin(id) { document.getElementById(id).classList.add('hidden'); }
+
+    const avs = ["✋", "👆", "👍", "👊", "✌️", "🙏", "💪", "🧠", "👤", "🎭", "🛡️", "⚔️", "🔱", "🕉️", "👁️"];
+    document.getElementById('avatar-grid').innerHTML = avs.map(a => `<div onclick="soundEngine.play('click'); selectedAvatar='${a}'; $('.avatar-item').css('background','none'); $(this).css('background','var(--gold)')" class="avatar-item cursor-pointer text-2xl p-2 hover:bg-gold rounded-lg">${a}</div>`).join('');
+
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    const pieceTypes = ['wP', 'wN', 'wB', 'wR', 'wQ', 'wK', 'bP', 'bN', 'bB', 'bR', 'bQ', 'bK'];
+    let bgPieces = [];
+    const pieceImages = {};
+    let imagesLoaded = 0;
+
+    pieceTypes.forEach(type => {
+        const img = new Image();
+        img.src = `https://chessboardjs.com/img/chesspieces/wikipedia/${type}.png`;
+        img.onload = () => { imagesLoaded++; pieceImages[type] = img; if (imagesLoaded === pieceTypes.length) { initBG(); drawBG(); } };
+    });
+
+    function initBG() {
+        for(let i=0; i<15; i++) bgPieces.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, speed: Math.random()*0.5+0.2, type: pieceTypes[Math.floor(Math.random()*pieceTypes.length)], size: Math.random()*40+40, opacity: 0.2 });
+    }
+
+    function drawBG() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        bgPieces.forEach(p => {
+            ctx.globalAlpha = p.opacity;
+            if(pieceImages[p.type]) ctx.drawImage(pieceImages[p.type], p.x, p.y, p.size, p.size);
+            p.y -= p.speed; if(p.y < -p.size) { p.y = canvas.height + p.size; p.x = Math.random()*canvas.width; }
+        });
+        requestAnimationFrame(drawBG);
+    }
+    loadProfile();
+</script>
+</body>
+</html>
