@@ -240,6 +240,40 @@
             font-size: 5rem;
             text-shadow: 0 0 40px rgba(239, 68, 68, 0.8);
         }
+
+        /* --- MOBILE RESPONSIVE STYLES --- */
+        @media (max-width: 768px) {
+            .glow-text {
+                font-size: 3rem;
+            }
+            #mainBoard {
+                width: 90vw !important;
+                margin: 0 auto;
+            }
+            .game-ui-header {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .book-ui {
+                width: 95vw;
+                min-height: auto;
+            }
+            .btn-squircle {
+                padding: 8px 15px;
+                font-size: 0.9rem;
+            }
+            #setup-win .w-\[420px\] {
+                width: 90vw;
+            }
+            .check-text { font-size: 3rem; }
+            .mate-text { font-size: 2.5rem; }
+            
+            #game-ui .max-w-4xl {
+                flex-direction: column;
+                padding-top: 10px;
+            }
+            .vs-badge { display: none; }
+        }
     </style>
 </head>
 <body onclick="handleUserInteraction()">
