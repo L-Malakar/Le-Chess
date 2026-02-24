@@ -9,11 +9,17 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
     <style>
         :root {
-            --gold: #d4af37;
+            --primary-purple: #50207A;
+            --light-lavender: #D6B9FC;
+            --soft-blue: #838CE5;
             --dark-slate: #0a0f1a;
-            --squircle: 14px;
+            --squircle: 18px; /* Slightly smoother squircle */
             --error-red: #ef4444;
-            --highlight-color: rgba(34, 197, 94, 0.8);
+            --highlight-color: rgba(131, 140, 229, 0.8);
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --hint-move: rgba(34, 197, 94, 0.8); /* Green for hint target */
+            --hint-piece: rgba(59, 130, 246, 0.8); /* Blue for hint source */
         }
 
         body {
@@ -22,7 +28,7 @@
             font-family: 'Segoe UI', sans-serif;
             overflow: hidden;
             margin: 0;
-            cursor: pointer;
+            cursor: default;
         }
 
         /* --- DYNAMIC FLASHLIGHT LIGHT SOURCE --- */
@@ -37,8 +43,8 @@
             background: radial-gradient(
                 circle 250px at var(--mouse-x, 50%) var(--mouse-y, 50%),
                 rgba(0, 0, 0, 0) 0%,
-                rgba(0, 0, 0, 0.2) 30%,
-                rgba(10, 15, 26, 0.85) 100%
+                rgba(0, 0, 0, 0.05) 30%,
+                rgba(10, 15, 26, 0.95) 100%
             );
         }
 
@@ -51,19 +57,37 @@
             pointer-events: none;
         }
 
+        /* IMPROVED SQUIRCLE BUTTONS */
         .btn-squircle {
             border-radius: var(--squircle);
-            transition: all 0.3s ease;
-            background: var(--gold);
-            color: #000;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: linear-gradient(135deg, var(--primary-purple), #3b185a);
+            color: var(--light-lavender);
+            border: 1px solid var(--glass-border);
             font-weight: bold;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 10px 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            backdrop-filter: blur(5px);
         }
 
-        .btn-squircle:hover { transform: scale(1.05); box-shadow: 0 0 15px rgba(212, 175, 55, 0.4); }
+        .btn-squircle:hover { 
+            transform: scale(1.05) translateY(-2px); 
+            box-shadow: 0 8px 25px rgba(131, 140, 229, 0.4);
+            background: var(--soft-blue);
+            color: var(--primary-purple);
+            border-color: white;
+        }
+
+        /* GLASS PANELS */
+        .glass-panel {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--squircle);
+        }
 
         .close-x {
             position: absolute;
@@ -87,11 +111,12 @@
         .glow-text {
             font-size: 5rem;
             font-weight: 900;
-            color: #fff;
-            text-shadow: 0 0 15px var(--gold);
-            animation: shine 4s infinite;
+            color: var(--light-lavender);
+            text-shadow: 0 0 20px var(--primary-purple), 0 0 40px rgba(131, 140, 229, 0.3);
+            animation: shine 4s infinite ease-in-out;
+            letter-spacing: -2px;
         }
-        @keyframes shine { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        @keyframes shine { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.8; transform: scale(0.98); } }
 
         .switch {
             position: relative;
@@ -111,7 +136,7 @@
             height: 16px; width: 16px; left: 3px; bottom: 3px;
             background-color: white; transition: .4s; border-radius: 50%;
         }
-        input:checked + .slider { background-color: var(--gold); }
+        input:checked + .slider { background-color: var(--soft-blue); }
         input:checked + .slider:before { transform: translateX(22px); }
 
         input[type="number"]::-webkit-inner-spin-button, 
@@ -119,13 +144,13 @@
             -webkit-appearance: none; margin: 0; 
         }
 
-        #bgCanvas { position: fixed; top: 0; left: 0; z-index: -2; }
+        #bgCanvas { position: fixed; top: 0; left: 0; z-index: -2; filter: blur(2px); }
         .hidden { display: none !important; }
         
         .book-ui {
             background: #f4e4bc;
             color: #332211;
-            border: 6px solid #4a3728;
+            border: 6px solid var(--primary-purple);
             border-radius: var(--squircle);
             padding: 25px;
             box-shadow: 20px 20px 0px rgba(0,0,0,0.3);
@@ -135,7 +160,7 @@
         }
         .book-page-btn {
             font-weight: bold;
-            color: #5a4a3a;
+            color: var(--primary-purple);
             cursor: pointer;
             user-select: none;
         }
@@ -153,13 +178,13 @@
         }
 
         .vs-badge {
-            background: var(--gold);
-            color: black;
+            background: var(--soft-blue);
+            color: var(--primary-purple);
             font-weight: 900;
             padding: 2px 8px;
-            border-radius: 4px;
+            border-radius: 6px;
             font-size: 0.75rem;
-            box-shadow: 0 0 10px var(--gold);
+            box-shadow: 0 0 15px var(--soft-blue);
         }
 
         .dot-highlight { position: relative; }
@@ -181,7 +206,7 @@
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            border: 4px solid rgba(239, 68, 68, 0.6);
+            border: 4px solid var(--error-red);
             border-radius: 50%;
             box-sizing: border-box;
             pointer-events: none;
@@ -192,14 +217,24 @@
             box-shadow: inset 0 0 20px #000, 0 0 15px #ef4444 !important;
         }
 
+        .hint-source-highlight {
+            background-color: var(--hint-piece) !important;
+            box-shadow: inset 0 0 15px rgba(255,255,255,0.5) !important;
+        }
+
+        .hint-target-highlight {
+            background-color: var(--hint-move) !important;
+            box-shadow: inset 0 0 15px rgba(255,255,255,0.5) !important;
+        }
+
         .promo-choice {
             transition: all 0.2s;
             cursor: pointer;
             border: 2px solid transparent;
         }
         .promo-choice:hover {
-            background: rgba(212, 175, 55, 0.2);
-            border-color: var(--gold);
+            background: rgba(131, 140, 229, 0.2);
+            border-color: var(--soft-blue);
             transform: scale(1.1);
         }
 
@@ -230,9 +265,9 @@
         }
 
         .check-text {
-            color: #f59e0b;
+            color: var(--light-lavender);
             font-size: 6rem;
-            text-shadow: 0 0 30px rgba(245, 158, 11, 0.6);
+            text-shadow: 0 0 30px var(--primary-purple);
         }
 
         .mate-text {
@@ -250,17 +285,9 @@
                 width: 90vw !important;
                 margin: 0 auto;
             }
-            .game-ui-header {
-                flex-direction: column;
-                gap: 15px;
-            }
             .book-ui {
                 width: 95vw;
                 min-height: auto;
-            }
-            .btn-squircle {
-                padding: 8px 15px;
-                font-size: 0.9rem;
             }
             #setup-win .w-\[420px\] {
                 width: 90vw;
@@ -276,7 +303,7 @@
         }
     </style>
 </head>
-<body onclick="handleUserInteraction()">
+<body class="phase-menu" onclick="handleUserInteraction()">
 
 <div id="yt-player-container">
     <div id="player"></div>
@@ -289,11 +316,11 @@
 <div id="mate-alert" class="status-announcement mate-text">CHECKMATE</div>
 
 <div id="win-win" class="hidden fixed inset-0 flex items-center justify-center bg-black/90 z-[80]" onclick="event.stopPropagation()">
-    <div class="bg-slate-900 p-10 rounded-2xl border-4 border-gold text-center max-w-sm">
+    <div class="bg-slate-900 p-10 rounded-2xl border-4 border-[var(--soft-blue)] text-center max-w-sm">
         <h2 class="text-6xl mb-4">🏆</h2>
-        <h2 class="text-4xl text-gold font-black mb-2 italic">VICTORY</h2>
+        <h2 class="text-4xl text-[var(--light-lavender)] font-black mb-2 italic">VICTORY</h2>
         <p class="text-white opacity-80 mb-8">The battlefield belongs to you. Divine glory achieved.</p>
-        <button class="btn-squircle w-full py-4 text-xl" onclick="location.reload()">REPLAY</button>
+        <button class="btn-squircle w-full py-4 text-xl" onclick="resetToSetup()">RETRY</button>
     </div>
 </div>
 
@@ -302,7 +329,7 @@
         <h2 class="text-6xl mb-4">💀</h2>
         <h2 class="text-4xl text-red-500 font-black mb-2 italic">DEFEAT</h2>
         <p class="text-white opacity-80 mb-8">The Shroud of Dharma has fallen. Better luck next life.</p>
-        <button class="btn-squircle bg-red-600 text-white w-full py-4 text-xl" onclick="location.reload()">TRY AGAIN</button>
+        <button class="btn-squircle bg-red-600 text-white w-full py-4 text-xl" onclick="resetToSetup()">TRY AGAIN</button>
     </div>
 </div>
 
@@ -311,13 +338,13 @@
         <h2 class="text-6xl mb-4">⚖️</h2>
         <h2 class="text-4xl text-blue-400 font-black mb-2 italic">DRAW</h2>
         <p id="draw-reason" class="text-white opacity-80 mb-8">Balance has been restored to the Trimandala.</p>
-        <button class="btn-squircle bg-blue-500 text-white w-full py-4 text-xl" onclick="location.reload()">REPLAY</button>
+        <button class="btn-squircle bg-blue-500 text-white w-full py-4 text-xl" onclick="resetToSetup()">REPLAY</button>
     </div>
 </div>
 
 <div id="home-menu" class="flex flex-col items-center justify-center h-screen">
     <div class="fixed top-6 left-6 right-6 flex justify-between items-center">
-        <button class="bg-slate-800 border border-gold text-gold p-3 rounded-xl hover:bg-gold hover:text-black transition-colors" onclick="event.stopPropagation(); soundEngine.play('click'); openWin('settings-win')">
+        <button class="glass-panel text-[var(--soft-blue)] p-3 hover:bg-[var(--soft-blue)] hover:text-[var(--primary-purple)] transition-colors" onclick="event.stopPropagation(); soundEngine.play('click'); openWin('settings-win')">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/></svg>
         </button>
         <button id="profile-btn" class="btn-squircle flex gap-3" onclick="event.stopPropagation(); soundEngine.play('click'); handleProfileClick()">
@@ -330,26 +357,26 @@
     <p class="text-xl tracking-widest opacity-80 mb-8">V- 0.1(Beta)</p>
     
     <div class="flex gap-4">
-        <button class="btn-squircle text-2xl px-12" onclick="event.stopPropagation(); soundEngine.play('click'); openWin('setup-win')">⚔️ PLAY</button>
-        <button class="btn-squircle bg-slate-700 text-white" onclick="event.stopPropagation(); soundEngine.play('click'); openWin('how-to-win')">📖 RULES</button>
+        <button class="btn-squircle text-2xl px-12" onclick="event.stopPropagation(); soundEngine.play('click'); setPhase('setup'); openWin('setup-win')">⚔️ PLAY</button>
+        <button class="btn-squircle bg-slate-700/50 text-white" onclick="event.stopPropagation(); soundEngine.play('click'); openWin('how-to-win')">📖 RULES</button>
     </div>
 </div>
 
 <div id="setup-win" class="hidden fixed inset-0 flex items-center justify-center bg-black/80 z-50" onclick="event.stopPropagation()">
-    <div class="bg-slate-900 p-8 rounded-2xl border border-gold w-[420px] relative">
-        <div class="close-x" onclick="soundEngine.play('click'); closeWin('setup-win')">✕</div>
-        <h2 class="text-2xl text-center text-gold mb-6 font-bold">Battle Config</h2>
+    <div class="glass-panel p-8 w-[420px] relative">
+        <div class="close-x" onclick="soundEngine.play('click'); setPhase('menu'); closeWin('setup-win')">✕</div>
+        <h2 class="text-2xl text-center text-[var(--light-lavender)] mb-6 font-bold">Battle Config</h2>
         <div class="space-y-4">
-            <div class="flex justify-between items-center bg-slate-800 p-3 rounded">
+            <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl">
                 <span>Side:</span>
-                <select id="sel-side" class="bg-transparent text-gold outline-none">
+                <select id="sel-side" class="bg-transparent text-[var(--soft-blue)] outline-none font-bold">
                     <option value="w">⚪ White</option>
                     <option value="b">⚫ Black</option>
                 </select>
             </div>
-            <div class="flex justify-between items-center bg-slate-800 p-3 rounded">
+            <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl">
                 <span>AI Core:</span>
-                <select id="sel-diff" class="bg-transparent text-gold outline-none">
+                <select id="sel-diff" class="bg-transparent text-[var(--soft-blue)] outline-none font-bold">
                     <option value="baby">👶 Baby (20%)</option>
                     <option value="normal">🤖 Normal (40%)</option>
                     <option value="expert">🧠 Expert (60%)</option>
@@ -357,9 +384,9 @@
                     <option value="gm">🔱 Grand Master (100%)</option>
                 </select>
             </div>
-            <div class="flex justify-between items-center bg-slate-800 p-3 rounded">
+            <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl">
                 <span>Time:</span>
-                <select id="sel-time" class="bg-transparent text-gold outline-none" onchange="handleTimeChange(this.value)">
+                <select id="sel-time" class="bg-transparent text-[var(--soft-blue)] outline-none font-bold" onchange="handleTimeChange(this.value)">
                     <option value="300">5:00</option>
                     <option value="600">10:00</option>
                     <option value="900">15:00</option>
@@ -371,43 +398,43 @@
                 </select>
             </div>
             <div class="grid grid-cols-1 gap-2">
-                <div class="flex justify-between items-center bg-slate-800 p-3 rounded">
-                    <span class="text-sm">Show Path (Green Dots)</span>
+                <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl">
+                    <span class="text-sm">Show Path (Dots)</span>
                     <label class="switch"><input type="checkbox" id="cfg-paths" checked><span class="slider"></span></label>
                 </div>
                 <div class="flex gap-4">
-                    <div class="flex-1 flex justify-between items-center bg-slate-800 p-3 rounded">
+                    <div class="flex-1 flex justify-between items-center bg-white/5 p-3 rounded-xl">
                         <span class="text-sm">Hints</span>
                         <label class="switch"><input type="checkbox" id="cfg-hints" checked><span class="slider"></span></label>
                     </div>
-                    <div class="flex-1 flex justify-between items-center bg-slate-800 p-3 rounded">
+                    <div class="flex-1 flex justify-between items-center bg-white/5 p-3 rounded-xl">
                         <span class="text-sm">Undo</span>
                         <label class="switch"><input type="checkbox" id="cfg-undo" checked><span class="slider"></span></label>
                     </div>
                 </div>
             </div>
         </div>
-        <button class="btn-squircle w-full mt-8" onclick="soundEngine.play('click'); initGame()">Commence Battle --></button>
+        <button class="btn-squircle w-full mt-8" onclick="soundEngine.play('click'); setPhase('battle'); initGame()">Commence Battle --></button>
     </div>
 </div>
 
 <div id="promotion-win" class="hidden fixed inset-0 flex items-center justify-center bg-black/90 z-[70]" onclick="event.stopPropagation()">
-    <div class="bg-slate-900 p-8 rounded-2xl border-2 border-gold text-center">
-        <h2 class="text-xl text-gold mb-6 font-bold tracking-widest uppercase">Ascension Selection</h2>
+    <div class="glass-panel p-8 text-center">
+        <h2 class="text-xl text-[var(--light-lavender)] mb-6 font-bold tracking-widest uppercase">Ascension Selection</h2>
         <div class="flex gap-6 justify-center">
-            <div class="promo-choice p-4 rounded-xl bg-slate-800" onclick="resolvePromotion('q')">
+            <div class="promo-choice p-4 rounded-xl bg-white/5" onclick="resolvePromotion('q')">
                 <img src="https://chessboardjs.com/img/chesspieces/wikipedia/wQ.png" class="w-16 h-16 mb-2 mx-auto piece-img-swap">
                 <span class="text-xs font-bold block">MANTRI</span>
             </div>
-            <div class="promo-choice p-4 rounded-xl bg-slate-800" onclick="resolvePromotion('r')">
+            <div class="promo-choice p-4 rounded-xl bg-white/5" onclick="resolvePromotion('r')">
                 <img src="https://chessboardjs.com/img/chesspieces/wikipedia/wR.png" class="w-16 h-16 mb-2 mx-auto piece-img-swap">
                 <span class="text-xs font-bold block">RATHA</span>
             </div>
-            <div class="promo-choice p-4 rounded-xl bg-slate-800" onclick="resolvePromotion('b')">
+            <div class="promo-choice p-4 rounded-xl bg-white/5" onclick="resolvePromotion('b')">
                 <img src="https://chessboardjs.com/img/chesspieces/wikipedia/wB.png" class="w-16 h-16 mb-2 mx-auto piece-img-swap">
                 <span class="text-xs font-bold block">GAJA</span>
             </div>
-            <div class="promo-choice p-4 rounded-xl bg-slate-800" onclick="resolvePromotion('n')">
+            <div class="promo-choice p-4 rounded-xl bg-white/5" onclick="resolvePromotion('n')">
                 <img src="https://chessboardjs.com/img/chesspieces/wikipedia/wN.png" class="w-16 h-16 mb-2 mx-auto piece-img-swap">
                 <span class="text-xs font-bold block">ASHVA</span>
             </div>
@@ -416,21 +443,21 @@
 </div>
 
 <div id="custom-time-win" class="hidden fixed inset-0 flex items-center justify-center bg-black/90 z-[60]" onclick="event.stopPropagation()">
-    <div class="bg-slate-900 p-8 rounded-2xl border border-gold w-[350px] relative text-center">
-        <h2 class="text-xl text-gold mb-6">Set Temporal Limits</h2>
+    <div class="glass-panel p-8 w-[350px] relative text-center">
+        <h2 class="text-xl text-[var(--light-lavender)] mb-6">Set Temporal Limits</h2>
         <div class="flex gap-4 justify-center mb-8">
             <div class="flex flex-col gap-1">
-                <input type="number" id="cust-h" value="0" min="0" max="99" class="w-16 p-3 bg-slate-800 border border-gray-600 rounded text-center text-xl text-white outline-none focus:border-gold">
+                <input type="number" id="cust-h" value="0" min="0" max="99" class="w-16 p-3 bg-white/5 border border-white/10 rounded-xl text-center text-xl text-white outline-none focus:border-[var(--soft-blue)]">
                 <span class="text-xs text-gray-400">HRS</span>
             </div>
             <div class="text-2xl mt-2">:</div>
             <div class="flex flex-col gap-1">
-                <input type="number" id="cust-m" value="10" min="0" max="59" class="w-16 p-3 bg-slate-800 border border-gray-600 rounded text-center text-xl text-white outline-none focus:border-gold">
+                <input type="number" id="cust-m" value="10" min="0" max="59" class="w-16 p-3 bg-white/5 border border-white/10 rounded-xl text-center text-xl text-white outline-none focus:border-[var(--soft-blue)]">
                 <span class="text-xs text-gray-400">MIN</span>
             </div>
             <div class="text-2xl mt-2">:</div>
             <div class="flex flex-col gap-1">
-                <input type="number" id="cust-s" value="0" min="0" max="59" class="w-16 p-3 bg-slate-800 border border-gray-600 rounded text-center text-xl text-white outline-none focus:border-gold">
+                <input type="number" id="cust-s" value="0" min="0" max="59" class="w-16 p-3 bg-white/5 border border-white/10 rounded-xl text-center text-xl text-white outline-none focus:border-[var(--soft-blue)]">
                 <span class="text-xs text-gray-400">SEC</span>
             </div>
         </div>
@@ -438,13 +465,55 @@
     </div>
 </div>
 
+function makeAIMove() {
+        const moves = game.moves();
+        if (moves.length === 0) return;
+
+        // --- ADD MOVE ORDERING HERE ---
+        // Evaluate captures first to help Alpha-Beta pruning skip bad branches faster
+        moves.sort((a, b) => {
+            let scoreA = 0;
+            let scoreB = 0;
+            if (a.includes('x')) scoreA += 10; // Prioritize captures
+            if (b.includes('x')) scoreB += 10;
+            return scoreB - scoreA;
+        });
+        // ------------------------------
+
+        const diffKey = document.getElementById('sel-diff').value;
+        const rand = Math.random();
+        let move;
+        const probs = { baby: 0.1, normal: 0.3, expert: 0.6, master: 0.7, gm: 0.9 };
+        const depth = (diffKey === 'gm' || diffKey === 'master') ? 3 : 2;
+
+        if (rand < probs[diffKey]) {
+            let bestScore = -9999;
+            let bestMove = moves[0];
+            for (let i = 0; i < moves.length; i++) {
+                game.move(moves[i]);
+                let score = minimax(game, depth - 1, -10000, 10000, false);
+                game.undo();
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMove = moves[i];
+                }
+            }
+            move = bestMove;
+        } else {
+            move = moves[Math.floor(Math.random() * moves.length)];
+        }
+        const moveRes = game.move(move);
+        updateScore(moveRes);
+        board.position(game.fen());
+    }
+
 <div id="profile-win" class="hidden fixed inset-0 flex items-center justify-center bg-black/90 z-50" onclick="event.stopPropagation()">
-    <div class="bg-slate-900 p-8 rounded-2xl border border-gold w-96 text-center relative">
+    <div class="glass-panel p-8 w-96 text-center relative">
         <div class="close-x" onclick="soundEngine.play('click'); closeWin('profile-win')">✕</div>
-        <h2 class="text-2xl mb-4 text-gold">Player Identity</h2>
-        <input id="reg-name" type="text" placeholder="Enter Name (Min 3 chars)" class="w-full p-3 mb-4 bg-slate-800 rounded border border-gray-600 outline-none focus:border-gold transition-all">
-        <select id="reg-class" class="w-full p-3 mb-6 bg-slate-800 rounded border border-gray-600">
-            <option>Newbie</option><option>Beginner</option><option>Intermediate</option><option>Expert</option><option>Master</option><option>Grand Master</option>
+        <h2 class="text-2xl mb-4 text-[var(--light-lavender)]">Player Identity</h2>
+        <input id="reg-name" type="text" placeholder="Enter Name (Min 3 chars)" class="w-full p-3 mb-4 bg-white/5 rounded-xl border border-white/10 outline-none focus:border-[var(--soft-blue)] transition-all">
+        <select id="reg-class" class="w-full p-3 mb-6 bg-white/5 border border-white/10 rounded-xl text-white">
+            <option class="bg-slate-900">Newbie</option><option class="bg-slate-900">Beginner</option><option class="bg-slate-900">Intermediate</option><option class="bg-slate-900">Expert</option><option class="bg-slate-900">Master</option><option class="bg-slate-900">Grand Master</option>
         </select>
         <div class="grid grid-cols-5 gap-2 mb-6" id="avatar-grid"></div>
         <button class="btn-squircle w-full" onclick="soundEngine.play('click'); saveProfile()">Save Identity --></button>
@@ -452,13 +521,13 @@
 </div>
 
 <div id="info-win" class="hidden fixed inset-0 flex items-center justify-center bg-black/90 z-50" onclick="event.stopPropagation()">
-    <div class="bg-slate-900 p-8 rounded-2xl border border-gold w-80 text-center relative">
+    <div class="glass-panel p-8 w-80 text-center relative">
         <div class="close-x" onclick="soundEngine.play('click'); closeWin('info-win')">✕</div>
         <div id="info-avatar" class="text-6xl mb-4">✋</div>
         <h2 id="info-name" class="text-2xl text-white font-bold">Laya</h2>
-        <p id="info-rank" class="text-gold mb-8 uppercase tracking-widest text-sm">Grand Master</p>
+        <p id="info-rank" class="text-[var(--soft-blue)] mb-8 uppercase tracking-widest text-sm">Grand Master</p>
         <div class="flex flex-col gap-3">
-            <button class="btn-squircle bg-blue-600 text-white" onclick="soundEngine.play('click'); changeIdentity()">🔄 Change Pic / Name</button>
+            <button class="btn-squircle bg-blue-600/40 text-white" onclick="soundEngine.play('click'); changeIdentity()">🔄 Change Identity</button>
             <button class="btn-squircle bg-red-900/40 border border-red-500 text-red-200" onclick="soundEngine.play('click'); deleteIdentity()">🗑️ Delete Identity</button>
         </div>
     </div>
@@ -483,9 +552,9 @@
 </div>
 
 <div id="settings-win" class="hidden fixed inset-0 flex items-center justify-center bg-black/80 z-50" onclick="event.stopPropagation()">
-    <div class="bg-slate-900 p-8 rounded-2xl border border-gold w-80 relative">
+    <div class="glass-panel p-8 w-80 relative">
         <div class="close-x" onclick="soundEngine.play('click'); closeWin('settings-win')">✕</div>
-        <h2 class="text-xl text-gold mb-6 text-center">System Settings</h2>
+        <h2 class="text-xl text-[var(--light-lavender)] mb-6 text-center">System Settings</h2>
         <div class="flex justify-between items-center mb-6">
             <span>Audio SFX</span>
             <label class="switch"><input type="checkbox" id="set-sound" checked onchange="soundEngine.play('click')"><span class="slider"></span></label>
@@ -499,30 +568,30 @@
 
 <div id="game-ui" class="hidden fixed inset-0 bg-slate-950 flex flex-col items-center justify-center" onclick="event.stopPropagation()">
     <div class="flex w-full max-w-4xl justify-between items-center mb-4 px-4">
-        <div class="flex gap-4 items-center bg-slate-900/50 p-2 px-4 rounded-2xl border border-white/5 shadow-lg">
+        <div class="flex gap-4 items-center glass-panel p-2 px-4 shadow-lg">
             <div class="flex gap-3 items-center">
                 <span id="game-p-avatar" class="text-3xl">✋</span>
-                <div><p id="game-p-name" class="font-bold text-sm">Laya</p><p id="game-p-class" class="text-[10px] text-gold uppercase tracking-tighter">Beginner</p></div>
+                <div><p id="game-p-name" class="font-bold text-sm">Laya</p><p id="game-p-class" class="text-[10px] text-[var(--soft-blue)] uppercase tracking-tighter">Beginner</p></div>
             </div>
             
             <div class="vs-badge">V/S</div>
 
             <div class="flex gap-3 items-center text-right">
-                <div><p class="font-bold text-sm">Akasha AI</p><p id="game-ai-level" class="text-[10px] text-blue-400 uppercase tracking-tighter">Normal</p></div>
+                <div><p class="font-bold text-sm">Akasha AI</p><p id="game-ai-level" class="text-[10px] text-[var(--light-lavender)] uppercase tracking-tighter">Normal</p></div>
                 <span class="text-3xl">🤖</span>
             </div>
         </div>
 
         <div class="flex gap-6 text-xl">
-            <div class="bg-slate-800 px-4 py-1 rounded-lg border border-gold/30">⏳ <span id="timer">00:00</span></div>
-            <div class="bg-slate-800 px-4 py-1 rounded-lg border border-gold/30">🏆 <span id="score">0</span></div>
+            <div class="glass-panel px-4 py-1">⏳ <span id="timer" class="font-mono">00:00</span></div>
+            <div class="glass-panel px-4 py-1 text-yellow-400">🏆 <span id="score">0</span></div>
         </div>
     </div>
-    <div id="mainBoard" style="width: 500px" class="shadow-2xl border-4 border-slate-700 rounded"></div>
+    <div id="mainBoard" style="width: 500px" class="shadow-2xl border-8 border-white/5 rounded-xl"></div>
     <div class="flex gap-4 mt-8">
-        <button id="btn-undo-game" class="bg-slate-800 p-3 rounded-xl border border-gold" onclick="soundEngine.play('click'); undo()">↩️ Undo</button>
-        <button id="btn-hint-game" class="bg-slate-800 p-3 rounded-xl border border-gold" onclick="soundEngine.play('click'); showHint()">💡 Hint</button>
-        <button class="bg-red-900/50 p-3 rounded-xl border border-red-500 text-red-200" onclick="soundEngine.play('click'); location.reload()">🏳️ Surrender</button>
+        <button id="btn-undo-game" class="btn-squircle bg-slate-800/50" onclick="soundEngine.play('click'); undo()">↩️ Undo</button>
+        <button id="btn-hint-game" class="btn-squircle bg-slate-800/50" onclick="soundEngine.play('click'); showHint()">💡 Hint</button>
+        <button class="btn-squircle bg-red-900/40 border-red-500/50 text-red-200" onclick="soundEngine.play('click'); backToMenu()">🏳️ Surrender</button>
     </div>
 </div>
 
@@ -566,8 +635,6 @@
         toggleFullScreen();
         soundEngine.init();
         
-        // Browsers block audio until a click happens. 
-        // This function triggers on any click, allowing the music to start.
         if (!musicStarted && ytPlayer && document.getElementById('set-music').checked) {
             ytPlayer.playVideo();
             musicStarted = true;
@@ -663,6 +730,10 @@
         }
     }
 
+    function setPhase(phase) {
+        document.body.className = 'phase-' + phase;
+    }
+
     window.addEventListener('mousemove', e => {
         const mask = document.getElementById('flashlight-mask');
         mask.style.setProperty('--mouse-x', e.clientX + 'px');
@@ -682,7 +753,7 @@
     const pieceValues = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
 
     function removeHighlights() {
-        $('#mainBoard .square-55d63').removeClass('dot-highlight capture-highlight king-check-highlight');
+        $('#mainBoard .square-55d63').removeClass('dot-highlight capture-highlight king-check-highlight hint-source-highlight hint-target-highlight');
     }
 
     function highlightSquare(square, type) {
@@ -690,6 +761,8 @@
         if (type === 'move') $square.addClass('dot-highlight');
         if (type === 'capture') $square.addClass('capture-highlight');
         if (type === 'king-check') $square.addClass('king-check-highlight');
+        if (type === 'hint-source') $square.addClass('hint-source-highlight');
+        if (type === 'hint-target') $square.addClass('hint-target-highlight');
     }
 
     function showAlert(type) {
@@ -702,17 +775,6 @@
         const kingPos = findKing(game.turn());
         if(kingPos) highlightSquare(kingPos, 'king-check');
         soundEngine.play(type);
-    }
-
-    function findKing(color) {
-        for(let r=0; r<8; r++) {
-            for(let c=0; c<8; c++) {
-                let sq = String.fromCharCode(97 + c) + (8 - r);
-                let p = game.get(sq);
-                if(p && p.type === 'k' && p.color === color) return sq;
-            }
-        }
-        return null;
     }
 
     function findKing(color) {
@@ -847,6 +909,29 @@
         board.position(game.fen());
     }
 
+    function showHint() {
+        if (game.game_over() || game.turn() !== playerSide) return;
+        removeHighlights();
+        const moves = game.moves({ verbose: true });
+        if (moves.length === 0) return;
+        
+        let bestScore = -9999;
+        let bestMove = moves[0];
+        
+        moves.forEach(m => {
+            game.move(m);
+            let score = minimax(game, 2, -10000, 10000, false);
+            game.undo();
+            if (score > bestScore) {
+                bestScore = score;
+                bestMove = m;
+            }
+        });
+
+        highlightSquare(bestMove.from, 'hint-source');
+        highlightSquare(bestMove.to, 'hint-target');
+    }
+
     const bookData = [
         { img: "https://chessboardjs.com/img/chesspieces/wikipedia/wP.png", text: "<b>Padati (Pawn):</b> Moves one square forward, but captures diagonally. On its first move, it can leap two squares." },
         { img: "https://chessboardjs.com/img/chesspieces/wikipedia/wN.png", text: "<b>Ashva (Knight):</b> Moves in an 'L' shape. It is the only unit that can leap over other pieces." },
@@ -917,6 +1002,26 @@
         }
     }
 
+    function backToMenu() {
+        if(gameTimer) clearInterval(gameTimer);
+        document.getElementById('game-ui').classList.add('hidden');
+        document.getElementById('home-menu').classList.remove('hidden');
+        setPhase('menu');
+        if(board) board.destroy();
+    }
+
+    function resetToSetup() {
+        if(gameTimer) clearInterval(gameTimer);
+        document.getElementById('win-win').classList.add('hidden');
+        document.getElementById('lose-win').classList.add('hidden');
+        document.getElementById('draw-win').classList.add('hidden');
+        document.getElementById('game-ui').classList.add('hidden');
+        document.getElementById('home-menu').classList.remove('hidden');
+        if(board) board.destroy();
+        setPhase('setup');
+        openWin('setup-win');
+    }
+
     function initGame() {
         document.getElementById('home-menu').classList.add('hidden');
         document.getElementById('setup-win').classList.add('hidden');
@@ -945,6 +1050,7 @@
             onDragStart: (source, piece) => {
                 if (game.game_over()) return false;
                 if ((playerSide === 'w' && piece.search(/^b/) !== -1) || (playerSide === 'b' && piece.search(/^w/) !== -1)) return false;
+                removeHighlights();
                 if (showPaths) {
                     const moves = game.moves({ square: source, verbose: true });
                     moves.forEach(m => highlightSquare(m.to, m.captured ? 'capture' : 'move'));
@@ -1029,7 +1135,7 @@
     function closeWin(id) { document.getElementById(id).classList.add('hidden'); }
 
     const avs = ["✋", "👆", "👍", "👊", "✌️", "🙏", "💪", "🧠", "👤", "🎭", "🛡️", "⚔️", "🔱", "🕉️", "👁️"];
-    document.getElementById('avatar-grid').innerHTML = avs.map(a => `<div onclick="soundEngine.play('click'); selectedAvatar='${a}'; $('.avatar-item').css('background','none'); $(this).css('background','var(--gold)')" class="avatar-item cursor-pointer text-2xl p-2 hover:bg-gold rounded-lg">${a}</div>`).join('');
+    document.getElementById('avatar-grid').innerHTML = avs.map(a => `<div onclick="soundEngine.play('click'); selectedAvatar='${a}'; $('.avatar-item').css('background','none'); $(this).css('background','var(--soft-blue)')" class="avatar-item cursor-pointer text-2xl p-2 hover:bg-[var(--soft-blue)] rounded-lg">${a}</div>`).join('');
 
     const canvas = document.getElementById('bgCanvas');
     const ctx = canvas.getContext('2d');
@@ -1046,12 +1152,15 @@
     });
 
     function initBG() {
-        for(let i=0; i<15; i++) bgPieces.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, speed: Math.random()*0.5+0.2, type: pieceTypes[Math.floor(Math.random()*pieceTypes.length)], size: Math.random()*40+40, opacity: 0.2 });
+        for(let i=0; i<15; i++) bgPieces.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, speed: Math.random()*0.5+0.2, type: pieceTypes[Math.floor(Math.random()*pieceTypes.length)], size: Math.random()*40+40, opacity: 0.35 });
     }
 
     function drawBG() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         bgPieces.forEach(p => {
+            // "Glassy" style piece drawing
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = 'rgba(255, 255, 255, 0.2)';
             ctx.globalAlpha = p.opacity;
             if(pieceImages[p.type]) ctx.drawImage(pieceImages[p.type], p.x, p.y, p.size, p.size);
             p.y -= p.speed; if(p.y < -p.size) { p.y = canvas.height + p.size; p.x = Math.random()*canvas.width; }
