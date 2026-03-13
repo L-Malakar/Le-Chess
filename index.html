@@ -31,12 +31,22 @@
             cursor: default;
         }
 
+        #fxCanvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* Flashlight effect smoothness */
         #flashlight-mask {
             position: fixed;
             top: 0; left: 0;
             width: 100vw; height: 100vh;
             pointer-events: none;
             z-index: -1;
+            transition: background 0.15s ease-out;
             background: radial-gradient(
                 circle 250px at var(--mouse-x, 50%) var(--mouse-y, 50%),
                 rgba(0, 0, 0, 0) 0%,
@@ -63,12 +73,14 @@
         }
 
         .btn-squircle:hover:not(:disabled) { 
-            transform: scale(1.05) translateY(-2px); 
-            box-shadow: 0 8px 25px rgba(131, 140, 229, 0.4);
+            transform: scale(1.05) translateY(-3px); 
+            box-shadow: 0 12px 30px rgba(131, 140, 229, 0.4);
             background: var(--soft-blue);
             color: var(--primary-purple);
             border-color: white;
         }
+
+        .btn-squircle:active:not(:disabled) { transform: scale(0.95); }
 
         .btn-squircle:disabled { opacity: 0.6; cursor: not-allowed; filter: grayscale(1); }
 
@@ -77,12 +89,20 @@
             backdrop-filter: blur(12px);
             border: 1px solid var(--glass-border);
             border-radius: var(--squircle);
+            animation: panelFadeIn 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        @keyframes panelFadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .active-player {
             border: 2px solid var(--soft-blue) !important;
-            box-shadow: 0 0 20px var(--soft-blue);
+            box-shadow: 0 0 25px var(--soft-blue);
             background: rgba(131, 140, 229, 0.15) !important;
+            transform: scale(1.02);
+            transition: all 0.5s ease;
         }
 
         .close-x {
@@ -92,9 +112,9 @@
             background: rgba(255,255,255,0.1);
             border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
-            cursor: pointer; transition: all 0.2s; color: white; font-weight: bold; z-index: 10;
+            cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); color: white; font-weight: bold; z-index: 10;
         }
-        .close-x:hover { background: var(--error-red); transform: rotate(90deg); }
+        .close-x:hover { background: var(--error-red); transform: rotate(180deg); }
 
         .glow-text {
             font-size: 5rem; font-weight: 900;
@@ -103,7 +123,7 @@
             animation: shine 4s infinite ease-in-out;
             letter-spacing: -2px;
         }
-        @keyframes shine { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.8; transform: scale(0.98); } }
+        @keyframes shine { 0%, 100% { opacity: 1; transform: scale(1) rotate(-1deg); } 50% { opacity: 0.8; transform: scale(0.98) rotate(1deg); } }
 
         .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -133,9 +153,13 @@
             border-radius: var(--squircle);
             padding: 25px; box-shadow: 20px 20px 0px rgba(0,0,0,0.3);
             min-height: 480px; display: flex; flex-direction: column; justify-content: space-between;
+            animation: bookOpen 0.5s ease-out;
         }
-        .book-page-btn { font-weight: bold; color: var(--primary-purple); cursor: pointer; user-select: none; }
-        .book-page-btn:hover { color: #000; text-decoration: underline; }
+
+        @keyframes bookOpen { from { transform: scale(0.8) rotate(-5deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
+
+        .book-page-btn { font-weight: bold; color: var(--primary-purple); cursor: pointer; user-select: none; transition: transform 0.2s; }
+        .book-page-btn:hover { color: #000; transform: scale(1.3); }
         
         .book-img-container {
             background: rgba(0,0,0,0.05); border: 2px dashed rgba(0,0,0,0.1);
@@ -147,7 +171,9 @@
             background: var(--soft-blue); color: var(--primary-purple);
             font-weight: 900; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem;
             box-shadow: 0 0 15px var(--soft-blue);
+            animation: pulse 2s infinite;
         }
+        @keyframes pulse { 0% { opacity: 0.8; } 50% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0.8; } }
 
         .dot-highlight { position: relative; }
         .dot-highlight::after {
@@ -155,25 +181,31 @@
             transform: translate(-50%, -50%); width: 15px; height: 15px;
             background-color: var(--highlight-color); border-radius: 50%;
             pointer-events: none; box-shadow: 0 0 8px var(--highlight-color);
+            animation: dotFade 0.3s ease;
         }
+        @keyframes dotFade { from { transform: translate(-50%, -50%) scale(0); } to { transform: translate(-50%, -50%) scale(1); } }
         
         .capture-highlight { position: relative; }
         .capture-highlight::after {
             content: ''; position: absolute; top: 0; left: 0;
             width: 100%; height: 100%; border: 4px solid var(--error-red);
             border-radius: 50%; box-sizing: border-box; pointer-events: none;
+            animation: pulseCapture 1s infinite;
         }
+        @keyframes pulseCapture { 0% { opacity: 1; transform: scale(0.9); } 50% { opacity: 0.5; transform: scale(1); } 100% { opacity: 1; transform: scale(0.9); } }
 
         .king-check-highlight {
             background-color: rgba(239, 68, 68, 0.8) !important;
-            box-shadow: inset 0 0 20px #000, 0 0 15px #ef4444 !important;
+            box-shadow: inset 0 0 20px #000, 0 0 25px #ef4444 !important;
+            animation: flashRed 0.5s infinite;
         }
+        @keyframes flashRed { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
 
         .hint-source-highlight { background-color: var(--hint-piece) !important; box-shadow: inset 0 0 15px rgba(255,255,255,0.5) !important; }
         .hint-target-highlight { background-color: var(--hint-move) !important; box-shadow: inset 0 0 15px rgba(255,255,255,0.5) !important; }
 
-        .promo-choice { transition: all 0.2s; cursor: pointer; border: 2px solid transparent; }
-        .promo-choice:hover { background: rgba(131, 140, 229, 0.2); border-color: var(--soft-blue); transform: scale(1.1); }
+        .promo-choice { transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; border: 2px solid transparent; }
+        .promo-choice:hover { background: rgba(131, 140, 229, 0.3); border-color: var(--soft-blue); transform: scale(1.15); }
 
         .status-announcement {
             position: fixed; top: 50%; left: 50%;
@@ -196,10 +228,25 @@
         .check-text { color: var(--light-lavender); font-size: 6rem; text-shadow: 0 0 30px var(--primary-purple); }
         .mate-text { color: #ef4444; font-size: 5rem; text-shadow: 0 0 40px rgba(239, 68, 68, 0.8); }
 
-        #mainBoard { transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+        #mainBoard { 
+            transition: transform 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55), box-shadow 0.5s ease;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+        
+        /* Board turn-based shadow color */
+        .white-turn-shadow { box-shadow: 0 0 50px rgba(131, 140, 229, 0.2) !important; }
+        .black-turn-shadow { box-shadow: 0 0 50px rgba(80, 32, 122, 0.4) !important; }
+
         .rotate-180 { transform: rotate(180deg); }
-        /* Fix piece orientation when board is rotated */
+        /* Fix piece orientation when board is rotated - targets the img specifically */
         .rotate-180 .piece-417db { transform: rotate(180deg); }
+
+        .victory-shimmer {
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite;
+        }
+        @keyframes shimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
 
         @media (max-width: 768px) {
             .glow-text { font-size: 3rem; }
@@ -208,7 +255,7 @@
             #setup-win .w-\[420px\] { width: 90vw; }
             .check-text { font-size: 3rem; }
             .mate-text { font-size: 2.5rem; }
-            #game-ui .max-w-4xl { flex-direction: column; padding-top: 10px; }
+            #game-ui .max-w-4xl { flex-direction: column; padding-top: 10px; gap: 10px; }
             .vs-badge { display: none; }
         }
     </style>
@@ -217,13 +264,14 @@
 
 <div id="yt-player-container"><div id="player"></div></div>
 <canvas id="bgCanvas"></canvas>
+<canvas id="fxCanvas"></canvas>
 <div id="flashlight-mask"></div>
 
 <div id="check-alert" class="status-announcement check-text">CHECK</div>
 <div id="mate-alert" class="status-announcement mate-text">CHECKMATE</div>
 
 <div id="win-win" class="hidden fixed inset-0 flex items-center justify-center bg-black/90 z-[80]" onclick="event.stopPropagation()">
-    <div class="bg-slate-900 p-10 rounded-2xl border-4 border-[var(--soft-blue)] text-center max-w-sm">
+    <div class="bg-slate-900 p-10 rounded-2xl border-4 border-[var(--soft-blue)] text-center max-w-sm victory-shimmer">
         <h2 class="text-6xl mb-4">🏆</h2>
         <h2 class="text-4xl text-[var(--light-lavender)] font-black mb-2 italic">VICTORY</h2>
         <p id="win-msg" class="text-white opacity-80 mb-8">The battlefield belongs to you. Divine glory achieved.</p>
@@ -260,7 +308,7 @@
     </div>
 </div>
 
-<div id="home-menu" class="flex flex-col items-center justify-center h-screen">
+<div id="home-menu" class="flex flex-col items-center justify-center h-screen transition-all duration-700">
     <div class="fixed top-6 left-6 right-6 flex justify-between items-center">
         <button class="glass-panel text-[var(--soft-blue)] p-3 hover:bg-[var(--soft-blue)] hover:text-[var(--primary-purple)] transition-colors" onclick="event.stopPropagation(); soundEngine.play('click'); openWin('settings-win')">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/></svg>
@@ -285,14 +333,14 @@
         <div class="close-x" onclick="soundEngine.play('click'); setPhase('menu'); closeWin('setup-win')">✕</div>
         <h2 class="text-2xl text-center text-[var(--light-lavender)] mb-6 font-bold">Game Setting</h2>
         <div class="space-y-4">
-            <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl">
+            <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl hover:bg-white/10 transition-all">
                 <span>Opponent:</span>
                 <select id="sel-mode" class="bg-transparent text-[var(--soft-blue)] outline-none font-bold" onchange="toggleModeSelect(this.value)">
                     <option value="ai">🤖 AI</option>
                     <option value="pvp">👥 Human (Local)</option>
                 </select>
             </div>
-            <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl">
+            <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl hover:bg-white/10 transition-all">
                 <span>Side:</span>
                 <select id="sel-side" class="bg-transparent text-[var(--soft-blue)] outline-none font-bold">
                     <option value="w">⚪ White</option>
@@ -309,7 +357,7 @@
                     <option value="gm">🔱 Grand Master (100%)</option>
                 </select>
             </div>
-            <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl">
+            <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl hover:bg-white/10 transition-all">
                 <span>Time (per player):</span>
                 <select id="sel-time" class="bg-transparent text-[var(--soft-blue)] outline-none font-bold" onchange="handleTimeChange(this.value)">
                     <option value="300">5:00</option>
@@ -451,7 +499,7 @@
 
 <div id="game-ui" class="hidden fixed inset-0 bg-slate-950 flex flex-col items-center justify-center" onclick="event.stopPropagation()">
     <div id="game-info-bar" class="flex w-full max-w-4xl justify-between items-center mb-4 px-4 transition-all duration-500">
-        <div id="p1-card" class="flex gap-4 items-center glass-panel p-2 px-4 shadow-lg border-2 border-transparent">
+        <div id="p1-card" class="flex gap-4 items-center glass-panel p-2 px-4 shadow-lg border-2 border-transparent transition-all duration-500">
             <span id="game-p-avatar" class="text-3xl">✋</span>
             <div>
                 <p id="game-p-name" class="font-bold text-sm">Laya</p>
@@ -465,7 +513,7 @@
         
         <div class="vs-badge">V/S</div>
 
-        <div id="p2-card" class="flex gap-4 items-center glass-panel p-2 px-4 shadow-lg border-2 border-transparent">
+        <div id="p2-card" class="flex gap-4 items-center glass-panel p-2 px-4 shadow-lg border-2 border-transparent transition-all duration-500">
             <div>
                 <p id="game-opp-name" class="font-bold text-sm text-right">Akasha AI</p>
                 <div class="flex items-center gap-2 justify-end">
@@ -478,7 +526,7 @@
         </div>
     </div>
 
-    <div id="mainBoard" style="width: 500px" class="shadow-2xl border-8 border-white/5 rounded-xl"></div>
+    <div id="mainBoard" style="width: 500px" class="shadow-2xl border-8 border-white/5 rounded-xl white-turn-shadow"></div>
     
     <div class="flex gap-4 mt-8">
         <button id="btn-undo-game" class="btn-squircle bg-slate-800/50" onclick="soundEngine.play('click'); undo()">↩️ Undo</button>
@@ -492,6 +540,103 @@
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
+    /* --- NEW PARTICLE & FX SYSTEM --- */
+    const fxManager = {
+        canvas: document.getElementById('fxCanvas'),
+        ctx: document.getElementById('fxCanvas').getContext('2d'),
+        particles: [],
+        animations: [],
+        init() {
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
+            this.animate();
+        },
+        createCaptureParticles(x, y, color) {
+            const count = 25;
+            const pColor = color === 'w' ? '#ffffff' : '#444444';
+            for (let i = 0; i < count; i++) {
+                this.particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 12,
+                    vy: (Math.random() - 0.5) * 12,
+                    life: 1.0,
+                    decay: 0.02 + Math.random() * 0.02,
+                    color: pColor,
+                    size: 4 + Math.random() * 6
+                });
+            }
+        },
+        playCheckWave() {
+            this.animations.push({ type: 'check', life: 1.0, decay: 0.015 });
+        },
+        playMateKill() {
+            this.animations.push({ type: 'mate', life: 1.0, decay: 0.008 });
+            // Blood burst particles
+            for(let i=0; i<80; i++) {
+                this.particles.push({
+                    x: window.innerWidth / 2,
+                    y: window.innerHeight / 2,
+                    vx: (Math.random() - 0.5) * 20,
+                    vy: (Math.random() - 0.5) * 20,
+                    life: 1.5,
+                    decay: 0.01,
+                    color: '#ef4444',
+                    size: 3 + Math.random() * 10
+                });
+            }
+        },
+        animate() {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            // Draw particles
+            this.particles.forEach((p, i) => {
+                p.x += p.vx; p.y += p.vy; p.life -= p.decay;
+                if (p.life <= 0) { this.particles.splice(i, 1); return; }
+                this.ctx.globalAlpha = p.life;
+                this.ctx.fillStyle = p.color;
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                this.ctx.fill();
+            });
+
+            // Draw Full Screen Anims
+            this.animations.forEach((a, i) => {
+                a.life -= a.decay;
+                if (a.life <= 0) { this.animations.splice(i, 1); return; }
+                this.ctx.globalAlpha = a.life;
+
+                if (a.type === 'check') {
+                    this.ctx.strokeStyle = '#838CE5';
+                    this.ctx.lineWidth = 15;
+                    const offset = (1 - a.life) * this.canvas.width;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(offset, 0); this.ctx.lineTo(offset, this.canvas.height);
+                    this.ctx.stroke();
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(this.canvas.width - offset, 0); this.ctx.lineTo(this.canvas.width - offset, this.canvas.height);
+                    this.ctx.stroke();
+                }
+
+                if (a.type === 'mate') {
+                    // Blade Slash (Red bar across center)
+                    const slashWidth = this.canvas.width * (1.2 - a.life);
+                    this.ctx.fillStyle = '#ef4444';
+                    this.ctx.save();
+                    this.ctx.translate(this.canvas.width/2, this.canvas.height/2);
+                    this.ctx.rotate(-0.2);
+                    this.ctx.fillRect(-slashWidth/2, -40, slashWidth, 80);
+                    // Add bright white "edge"
+                    this.ctx.fillStyle = 'white';
+                    this.ctx.fillRect(-slashWidth/2, -5, slashWidth, 10);
+                    this.ctx.restore();
+                }
+            });
+            this.ctx.globalAlpha = 1.0;
+            requestAnimationFrame(() => this.animate());
+        }
+    };
+    fxManager.init();
+
     let ytPlayer;
     let musicStarted = false;
 
@@ -612,6 +757,10 @@
         const kingPos = findKing(game.turn());
         if(kingPos) highlightSquare(kingPos, 'king-check');
         soundEngine.play(type);
+        
+        // TRIGGER NEW FX
+        if (type === 'check') fxManager.playCheckWave();
+        if (type === 'mate') fxManager.playMateKill();
     }
 
     function findKing(color) {
@@ -631,19 +780,24 @@
         const p2Card = document.getElementById('p2-card');
         const p1Status = document.getElementById('p1-status');
         const p2Status = document.getElementById('p2-status');
+        const mainBoard = document.getElementById('mainBoard');
 
         if (turn === 'w') {
             p1Card.classList.add('active-player');
             p2Card.classList.remove('active-player');
             p1Status.classList.remove('hidden');
             p2Status.classList.add('hidden');
-            if (gameMode === 'pvp') document.getElementById('mainBoard').classList.remove('rotate-180');
+            mainBoard.classList.add('white-turn-shadow');
+            mainBoard.classList.remove('black-turn-shadow');
+            if (gameMode === 'pvp') mainBoard.classList.remove('rotate-180');
         } else {
             p2Card.classList.add('active-player');
             p1Card.classList.remove('active-player');
             p2Status.classList.remove('hidden');
             p1Status.classList.add('hidden');
-            if (gameMode === 'pvp') document.getElementById('mainBoard').classList.add('rotate-180');
+            mainBoard.classList.add('black-turn-shadow');
+            mainBoard.classList.remove('white-turn-shadow');
+            if (gameMode === 'pvp') mainBoard.classList.add('rotate-180');
         }
     }
 
@@ -685,6 +839,13 @@
             if (move.color === 'w') p1Score += val; else p2Score += val;
             document.getElementById('p1-score').innerText = p1Score;
             document.getElementById('p2-score').innerText = p2Score;
+            
+            // TRIGGER PARTICLE EXPLOSION
+            const squareEl = document.querySelector(`.square-${move.to}`);
+            if (squareEl) {
+                const rect = squareEl.getBoundingClientRect();
+                fxManager.createCaptureParticles(rect.left + rect.width/2, rect.top + rect.height/2, move.color === 'w' ? 'b' : 'w');
+            }
         } else {
             soundEngine.play('move');
         }
@@ -883,7 +1044,6 @@
         gameMode = document.getElementById('sel-mode').value;
         showPaths = document.getElementById('cfg-paths').checked;
         
-        // Apply Settings Toggles
         document.getElementById('btn-hint-game').style.display = document.getElementById('cfg-hints').checked ? 'block' : 'none';
         document.getElementById('btn-undo-game').style.display = document.getElementById('cfg-undo').checked ? 'block' : 'none';
 
@@ -1013,7 +1173,7 @@
     function closeWin(id) { document.getElementById(id).classList.add('hidden'); }
 
     const avs = ["✋", "👆", "👍", "👊", "✌️", "🙏", "💪", "🧠", "👤", "🎭", "🛡️", "⚔️", "🔱", "🕉️", "👁️"];
-    document.getElementById('avatar-grid').innerHTML = avs.map(a => `<div onclick="soundEngine.play('click'); selectedAvatar='${a}'; $('.avatar-item').css('background','none'); $(this).css('background','var(--soft-blue)')" class="avatar-item cursor-pointer text-2xl p-2 hover:bg-[var(--soft-blue)] rounded-lg">${a}</div>`).join('');
+    document.getElementById('avatar-grid').innerHTML = avs.map(a => `<div onclick="soundEngine.play('click'); selectedAvatar='${a}'; $('.avatar-item').css('background','none'); $(this).css('background','var(--soft-blue)')" class="avatar-item cursor-pointer text-2xl p-2 hover:bg-[var(--soft-blue)] rounded-lg transition-all">${a}</div>`).join('');
 
     const canvas = document.getElementById('bgCanvas'); const ctx = canvas.getContext('2d');
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
@@ -1023,18 +1183,57 @@
         const img = new Image(); img.src = `https://chessboardjs.com/img/chesspieces/wikipedia/${type}.png`;
         img.onload = () => { imagesLoaded++; pieceImages[type] = img; if (imagesLoaded === pieceTypes.length) { initBG(); drawBG(); } };
     });
-    function initBG() { for(let i=0; i<15; i++) bgPieces.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, speed: Math.random()*0.5+0.2, type: pieceTypes[Math.floor(Math.random()*pieceTypes.length)], size: Math.random()*40+40, opacity: 0.35 }); }
+    function initBG() { for(let i=0; i<15; i++) bgPieces.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, speed: Math.random()*0.3+0.1, type: pieceTypes[Math.floor(Math.random()*pieceTypes.length)], size: Math.random()*40+40, opacity: 0.35, floatOffset: Math.random() * 100 }); }
     function drawBG() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         bgPieces.forEach(p => {
-            ctx.shadowBlur = 10; ctx.shadowColor = 'rgba(255, 255, 255, 0.2)'; ctx.globalAlpha = p.opacity;
-            if(pieceImages[p.type]) ctx.drawImage(pieceImages[p.type], p.x, p.y, p.size, p.size);
+            ctx.shadowBlur = 10; ctx.shadowColor = 'rgba(255, 255, 255, 0.1)'; ctx.globalAlpha = p.opacity;
+            // Add subtle horizontal floating
+            let xPos = p.x + Math.sin((Date.now() / 2000) + p.floatOffset) * 20;
+            if(pieceImages[p.type]) ctx.drawImage(pieceImages[p.type], xPos, p.y, p.size, p.size);
             p.y -= p.speed; if(p.y < -p.size) { p.y = canvas.height + p.size; p.x = Math.random()*canvas.width; }
         });
         requestAnimationFrame(drawBG);
     }
     loadProfile();
 </script>
+<!-- Code injected by live-server -->
+<script>
+	// <![CDATA[  <-- For SVG support
+	if ('WebSocket' in window) {
+		(function () {
+			function refreshCSS() {
+				var sheets = [].slice.call(document.getElementsByTagName("link"));
+				var head = document.getElementsByTagName("head")[0];
+				for (var i = 0; i < sheets.length; ++i) {
+					var elem = sheets[i];
+					var parent = elem.parentElement || head;
+					parent.removeChild(elem);
+					var rel = elem.rel;
+					if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
+						var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
+						elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
+					}
+					parent.appendChild(elem);
+				}
+			}
+			var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
+			var address = protocol + window.location.host + window.location.pathname + '/ws';
+			var socket = new WebSocket(address);
+			socket.onmessage = function (msg) {
+				if (msg.data == 'reload') window.location.reload();
+				else if (msg.data == 'refreshcss') refreshCSS();
+			};
+			if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
+				console.log('Live reload enabled.');
+				sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
+			}
+		})();
+	}
+	else {
+		console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
+	}
+	// ]]>
+</script>
 </body>
 </html>
-
